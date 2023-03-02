@@ -1,0 +1,43 @@
+import schedule
+
+import gspread as gs
+sa = gs.service_account()
+sh = sa.open("Weekend Timeloop Dilemma")
+t = 60
+wks = sh.worksheet("March4-5")
+
+
+def clean(x):
+ for l in x:
+  if l.isalnum(): break
+ else: return None
+ return x
+
+def optimize():
+ tally = {}
+ people = []
+ for n in range(1,wks.col_count):
+  person = []
+  for i,e in enumerate(list(filter(clean, wks.col_values(n)[1::]))):
+   if not (e.lower() in person):
+    tally[e.lower()] = tally.get(e.lower(), wks.row_count) + i
+   person += [e.lower()]
+  people += person
+ for e in tally:
+  tally[e] /= people.count(e)
+ wks.batch_clear(['d:d'])
+ wks.update('d1',[['Ranking']]+[[val] for val in sorted(tally, key=tally.get)])
+ global t 
+ sh.worksheet("Time").update('b1',t)
+ try: t = int(sh.worksheet("Time").acell('a1').value)
+ except: t = 0
+ if not(t):
+  exit()
+
+
+def runconst(x):
+ schedule.every(x).seconds.do(optimize)
+ while True: schedule.run_pending()
+
+if __name__ == "__main__":
+ runconst(t)
